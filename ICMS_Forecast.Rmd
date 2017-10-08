@@ -1,0 +1,95 @@
+---
+title: "ICMS"
+author: "Flávio Brito"
+date: "3 de agosto de 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(forecast)
+setwd("C:/Users/flavi/OneDrive/Source/Repos/aval_tech/data/")
+
+# This load works
+icms <- read.csv("ICMS.csv", sep = ";")
+```
+
+
+## Análise Preditiva - ICMS - Governo do Estado do Rio de Janeiro
+
+```{r icms}
+
+
+#put the data into a time series
+
+
+attach(icms)
+serie = ts(Indice, frequency=12, start=c(2005,1), end=c(2016,6))
+
+#subset the time series from 2014 forward using window commd
+serie2  <-  window(serie, start=c(2014,1), end=c(2016, 6))
+
+
+# fit the stl model using only the s.window argument
+fit <-  stl(serie2,s.window = "periodic")
+plot(serie2, col="gray",
+     main="Arrecadação do ICMS",
+     ylab="Valor", xlab="Tempo", type ="l")
+
+lines(fit$time.series[,2],col="red",ylab="Trend")
+plot(fit)
+
+#plota a Sazonalidade
+monthplot(fit$time.series[,"seasonal"], main="", ylab="Seasonal")
+
+plot(serie2, col="grey",
+     main="Arrecadação do ICMS",
+     ylab="Valor", xlab="Tempo",type ="l")
+lines(seasadj(fit),col="red",ylab="Seasonally adjusted")
+
+
+#Médias Móveis
+ma(serie2, order=5)
+plot(serie2, col="grey",
+     main="Arrecadação do ICMS - MA(5)",
+     ylab="Valor", xlab="Tempo",type ="l")
+lines(ma(serie2,5),col="red")
+
+
+serie3 <- window(serie2,start=2014)
+plot(serie3)
+ma4 <- ma(serie3, order=4, centre=FALSE)
+plot(ma4)
+ma2x4 <- ma(serie3, order=4, centre=TRUE)
+plot(ma2x4)
+lines(ma(serie3, order=6), col="red")
+
+# x is the time series
+fit <- decompose(serie2, type="multiplicative")
+plot(fit)
+
+#“Seasonal and Trend decomposition using Loess”
+# fit the stl model using only the s.window argument
+fit <-  stl(serie2,s.window = "periodic")
+
+# The two main parameters to be chosen when using STL are the trend window (t.window) and seasonal window (s.window). These control how rapidly the trend and seasonal components can change. Small values allow more rapid change. Setting the seasonal window to be infinite is equivalent to forcing the seasonal component to be periodic (i.e., identical across years)
+
+fit <- stl(serie2, t.window=12, s.window="periodic", robust=TRUE)
+plot(fit)
+
+#Forecasting with decomposition
+#shows naïve forecasts of the seasonally adjusted
+fit <- stl(serie2, t.window=15, s.window="periodic", robust=TRUE)
+eeadj <- seasadj(fit)
+plot(naive(eeadj), xlab="Tempo",
+     main="Naive forecasts of seasonally adjusted data")
+
+#shows random walk forecasts of the seasonally adjusted
+fcast <- forecast(fit, method="naive")
+plot(fcast, ylab="Valor")
+
+```
